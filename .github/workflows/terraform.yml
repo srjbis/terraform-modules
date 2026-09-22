@@ -1,0 +1,28 @@
+name: Terraform AKS checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['aks-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        terraform: ['1.9.8', '1.15.2']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ matrix.terraform }}
+      - run: terraform fmt -check -recursive
+      - run: terraform -chdir=aks init -backend=false -lockfile=readonly
+      - run: terraform -chdir=aks validate
+      - run: terraform -chdir=aks test
+      - run: terraform -chdir=aks/examples/private init -backend=false -lockfile=readonly
+      - run: terraform -chdir=aks/examples/private validate
