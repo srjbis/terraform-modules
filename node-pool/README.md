@@ -15,7 +15,7 @@ Selection is based on supplied input, not a name search. Keep object presence kn
 
 ```hcl
 module "apps" {
-  source = "git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.0.0"
+  source = "git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.1.0"
 
   name         = "apps"
   existing_aks = { id = var.aks_id }
@@ -29,7 +29,7 @@ See [existing-cluster example](examples/existing-aks/main.tf). The cluster stays
 
 ```hcl
 module "apps" {
-  source = "git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.0.0"
+  source = "git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.1.0"
 
   name = "apps"
   aks = {
@@ -60,7 +60,7 @@ See [new-cluster example](examples/new-aks/main.tf). This mode owns all three la
 | `zones` | `[]` | Set containing only 1, 2, 3; null elements rejected |
 | `tags` | `{}` | <=50 valid keys; non-null values <=256 characters; passed to any newly created AKS/network |
 
-The `aks` object requires `name`, `resource_group_name`, `location`, `dns_prefix`, `admin_group_object_ids`. Optional fields: `kubernetes_version`, `sku_tier`, `api_access`, `system_node_pool`, `network`; defaults and validation are delegated to [AKS](../aks/README.md). Supply tags at this module's top level. Azure checks region/SKU support, permissions, quotas and capacity. Size subnets for all pools, scale-out and rotation.
+The `aks` object requires `name`, `resource_group_name`, `location`, `dns_prefix`, `admin_group_object_ids`. It accepts all optional AKS inputs: `kubernetes_version`, `sku_tier`, `api_access`, `system_node_pool`, `network`, `network_profile`, `identity_type`, `private_dns_zone_id`, `private_cluster_public_fqdn_enabled`, `role_based_access_control_enabled`, `azure_rbac_enabled`, `local_account_disabled`, `azure_policy_enabled`, `oidc_issuer_enabled`, `workload_identity_enabled`, `run_command_enabled`, `node_os_upgrade_channel`. Defaults and guardrails are delegated to [AKS](../aks/README.md). Supply tags at this module's top level. The initial system pool may be fixed-size; the additional user pool remains autoscaled. Azure checks region/SKU support, permissions, quotas and capacity. Size subnets for all pools, scale-out and rotation.
 
 The additional pool always uses Linux/Ubuntu, User mode and autoscaling. Node public IPs are disabled. Desired node count belongs to the autoscaler. Rotation uses `name` + `r` (up to 12 characters) and can disrupt workloads. The initial system pool remains inside AKS as required by AzureRM.
 

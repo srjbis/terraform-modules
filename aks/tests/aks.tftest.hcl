@@ -83,7 +83,7 @@ run "public_allowlist_and_custom_pool" {
 run "mock_apply_outputs" {
   command = apply
   assert {
-    condition     = output.name == "aks-test" && output.id == azurerm_kubernetes_cluster.this.id && output.oidc_issuer_url == azurerm_kubernetes_cluster.this.oidc_issuer_url && output.identity_principal_id == azurerm_user_assigned_identity.this.principal_id && output.node_resource_group == azurerm_kubernetes_cluster.this.node_resource_group && output.kubelet_identity == azurerm_kubernetes_cluster.this.kubelet_identity
+    condition     = output.name == "aks-test" && output.id == azurerm_kubernetes_cluster.this.id && output.oidc_issuer_url == azurerm_kubernetes_cluster.this.oidc_issuer_url && output.identity_principal_id == azurerm_user_assigned_identity.this[0].principal_id && output.node_resource_group == azurerm_kubernetes_cluster.this.node_resource_group && output.kubelet_identity == azurerm_kubernetes_cluster.this.kubelet_identity
     error_message = "Outputs must expose the corresponding cluster attributes."
   }
 }

@@ -25,7 +25,7 @@ variable "aks_id" {
 
 module "node_pool" {
   source = "../.."
-  # Git source: git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.0.0
+  # Git source: git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.1.0
 
   name         = "apps"
   existing_aks = { id = var.aks_id }

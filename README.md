@@ -5,8 +5,8 @@ Three independently callable modules with automatic dependency composition:
 | Module | Behavior | Release |
 | --- | --- | --- |
 | [network](network/README.md) | Creates only a VNet and subnet; no AKS dependency | `network-v1.0.0` |
-| [aks](aks/README.md) | Creates network, identity/permissions, then AKS with its required system pool | `aks-v2.0.0` |
-| [node-pool](node-pool/README.md) | Adds a user pool to existing AKS, or creates network and AKS first | `node-pool-v1.0.0` |
+| [aks](aks/README.md) | Creates network, identity/permissions, then AKS with its required system pool | `aks-v2.1.0` |
+| [node-pool](node-pool/README.md) | Adds a user pool to existing AKS, or creates network and AKS first | `node-pool-v1.1.0` |
 
 All modules require Terraform >=1.9, <2 and AzureRM >=4.43, <5. Configure AzureRM and credentials in the caller. Resource groups are caller-managed; examples create their own where needed. Each module includes guardrails, mocked tests, outputs, examples and a changelog.
 
@@ -26,7 +26,7 @@ module "network" {
 
 ```hcl
 module "aks" {
-  source = "git::https://github.com/srjbis/terraform-modules.git//aks?ref=aks-v2.0.0"
+  source = "git::https://github.com/srjbis/terraform-modules.git//aks?ref=aks-v2.1.0"
 
   name                   = "aks-platform"
   resource_group_name    = "rg-platform"
@@ -40,7 +40,7 @@ module "aks" {
 
 ```hcl
 module "apps" {
-  source = "git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.0.0"
+  source = "git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.1.0"
 
   name         = "apps"
   existing_aks = { id = var.aks_id }
@@ -51,7 +51,7 @@ module "apps" {
 
 ```hcl
 module "apps" {
-  source = "git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.0.0"
+  source = "git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.1.0"
 
   name = "apps"
   aks = {

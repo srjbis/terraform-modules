@@ -36,7 +36,7 @@ run "network_and_identity_wiring" {
     error_message = "AKS must attach to the subnet created by the network module."
   }
   assert {
-    condition     = azurerm_kubernetes_cluster.this.identity[0].type == "UserAssigned" && azurerm_kubernetes_cluster.this.identity[0].identity_ids == toset([azurerm_user_assigned_identity.this.id]) && azurerm_role_assignment.network.scope == module.network.id && azurerm_role_assignment.network.principal_id == azurerm_user_assigned_identity.this.principal_id && azurerm_role_assignment.network.role_definition_name == "Network Contributor"
+    condition     = azurerm_kubernetes_cluster.this.identity[0].type == "UserAssigned" && azurerm_kubernetes_cluster.this.identity[0].identity_ids == toset([azurerm_user_assigned_identity.this[0].id]) && azurerm_role_assignment.network[0].scope == module.network.id && azurerm_role_assignment.network[0].principal_id == azurerm_user_assigned_identity.this[0].principal_id && azurerm_role_assignment.network[0].role_definition_name == "Network Contributor"
     error_message = "Cluster identity must receive network authorization."
   }
 }

@@ -88,19 +88,24 @@ variable "api_access" {
 }
 
 variable "system_node_pool" {
-  description = "Linux system pool. Autoscaling is always enabled; desired count is owned by the autoscaler."
+  description = "Linux system pool. Defaults to autoscaling; disable it and set node_count for fixed sizing."
   type = object({
-    name      = optional(string, "system")
-    vm_size   = optional(string, "Standard_D4s_v5")
-    min_count = optional(number, 2)
-    max_count = optional(number, 5)
-    zones     = optional(set(string), [])
+    name                        = optional(string, "system")
+    vm_size                     = optional(string, "Standard_D4s_v5")
+    min_count                   = optional(number, 2)
+    max_count                   = optional(number, 5)
+    zones                       = optional(set(string), [])
+    temporary_name_for_rotation = optional(string, "rotation")
+    auto_scaling_enabled        = optional(bool, true)
+    node_count                  = optional(number, 2)
+    os_sku                      = optional(string, "Ubuntu")
+    node_public_ip_enabled      = optional(bool, false)
   })
   default  = {}
   nullable = false
   validation {
-    condition     = can(regex("^[a-z][a-z0-9]{0,11}$", var.system_node_pool.name)) && var.system_node_pool.name != "rotation"
-    error_message = "System pool name must be 1-12 lowercase alphanumeric characters, begin with a letter and cannot be reserved name rotation."
+    condition     = can(regex("^[a-z][a-z0-9]{0,11}$", var.system_node_pool.name)) && var.system_node_pool.name != var.system_node_pool.temporary_name_for_rotation
+    error_message = "System pool name must be 1-12 lowercase alphanumeric characters, begin with a letter and differ from temporary_name_for_rotation."
   }
   validation {
     condition     = can(regex("^Standard_[A-Za-z0-9_]+$", var.system_node_pool.vm_size))
@@ -120,6 +125,18 @@ variable "system_node_pool" {
     condition     = alltrue([for zone in var.system_node_pool.zones : zone == null ? false : contains(["1", "2", "3"], zone)])
     error_message = "zones may contain only 1, 2 and 3. Confirm availability in your region."
   }
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9]{0,11}$", var.system_node_pool.temporary_name_for_rotation))
+    error_message = "temporary_name_for_rotation must be 1-12 lowercase alphanumeric characters starting with a letter."
+  }
+  validation {
+    condition     = var.system_node_pool.node_count >= 1 && var.system_node_pool.node_count <= 1000 && floor(var.system_node_pool.node_count) == var.system_node_pool.node_count
+    error_message = "node_count must be an integer from 1 to 1000 (used only when autoscaling is disabled)."
+  }
+  validation {
+    condition     = contains(["Ubuntu", "AzureLinux"], var.system_node_pool.os_sku)
+    error_message = "The Linux system pool supports os_sku Ubuntu or AzureLinux."
+  }
 }
 
 variable "tags" {
@@ -134,7 +151,7 @@ variable "tags" {
 }
 
 variable "network" {
-  description = "Network created with AKS. CIDRs must not overlap the fixed service (10.1.0.0/16) or pod (10.244.0.0/16) ranges."
+  description = "Network created with AKS. CIDRs must not overlap the configured service or active pod ranges."
   type = object({
     address_space = optional(string, "10.0.0.0/16")
     subnet_prefix = optional(string, "10.0.0.0/22")
@@ -143,10 +160,10 @@ variable "network" {
   default  = {}
   nullable = false
   validation {
-    condition = try(alltrue([for reserved in ["10.1.0.0/16", "10.244.0.0/16"] :
-      cidrhost("${split("/", var.network.address_space)[0]}/${min(tonumber(split("/", var.network.address_space)[1]), 16)}", 0) !=
-      cidrhost("${split("/", reserved)[0]}/${min(tonumber(split("/", var.network.address_space)[1]), 16)}", 0)
+    condition = try(alltrue([for reserved in concat([var.network_profile.service_cidr], local.uses_pod_cidr ? [var.network_profile.pod_cidr] : []) :
+      cidrhost("${split("/", var.network.address_space)[0]}/${min(tonumber(split("/", var.network.address_space)[1]), tonumber(split("/", reserved)[1]))}", 0) !=
+      cidrhost("${split("/", reserved)[0]}/${min(tonumber(split("/", var.network.address_space)[1]), tonumber(split("/", reserved)[1]))}", 0)
     ]), false)
-    error_message = "network.address_space must be a valid CIDR that does not overlap 10.1.0.0/16 or 10.244.0.0/16."
+    error_message = "network.address_space must not overlap the configured service_cidr or active pod_cidr."
   }
 }

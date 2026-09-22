@@ -30,7 +30,7 @@ resource "azurerm_resource_group" "this" {
 
 module "node_pool" {
   source = "../.."
-  # Git source: git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.0.0
+  # Git source: git::https://github.com/srjbis/terraform-modules.git//node-pool?ref=node-pool-v1.1.0
 
   name = "apps"
   aks = {
@@ -43,7 +43,13 @@ module "node_pool" {
       address_space = "172.20.0.0/16"
       subnet_prefix = "172.20.0.0/22"
     }
-    system_node_pool = { min_count = 2, max_count = 3 }
+    system_node_pool        = { auto_scaling_enabled = false, node_count = 2 }
+    node_os_upgrade_channel = "SecurityPatch"
+    network_profile = {
+      service_cidr   = "172.21.0.0/16"
+      dns_service_ip = "172.21.0.53"
+      pod_cidr       = "172.22.0.0/16"
+    }
   }
   scaling = { min_count = 0, max_count = 5 }
   tags    = { environment = "example" }

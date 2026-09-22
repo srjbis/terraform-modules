@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.0
+
+- Replace hardcoded cluster, identity, system pool and network-profile settings with validated inputs while preserving defaults.
+- Add cross-input security, DNS/CIDR and network-mode guardrails; support fixed-size pools and NAT egress prerequisites.
+- Preserve existing identity/role state with moved blocks; expand default, override and invalid-combination tests.
+
 ## 2.0.0
 
 - AKS now calls the standalone network module to create its VNet and subnet.

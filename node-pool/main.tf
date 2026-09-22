@@ -23,17 +23,29 @@ module "aks" {
   source   = "../aks"
   for_each = var.aks == null ? {} : { this = var.aks }
 
-  name                   = each.value.name
-  resource_group_name    = each.value.resource_group_name
-  location               = each.value.location
-  dns_prefix             = each.value.dns_prefix
-  admin_group_object_ids = each.value.admin_group_object_ids
-  kubernetes_version     = each.value.kubernetes_version
-  sku_tier               = each.value.sku_tier
-  api_access             = each.value.api_access
-  system_node_pool       = each.value.system_node_pool
-  network                = each.value.network
-  tags                   = var.tags
+  name                                = each.value.name
+  resource_group_name                 = each.value.resource_group_name
+  location                            = each.value.location
+  dns_prefix                          = each.value.dns_prefix
+  admin_group_object_ids              = each.value.admin_group_object_ids
+  kubernetes_version                  = each.value.kubernetes_version
+  sku_tier                            = each.value.sku_tier
+  api_access                          = each.value.api_access
+  system_node_pool                    = each.value.system_node_pool
+  network                             = each.value.network
+  private_cluster_public_fqdn_enabled = each.value.private_cluster_public_fqdn_enabled
+  role_based_access_control_enabled   = each.value.role_based_access_control_enabled
+  local_account_disabled              = each.value.local_account_disabled
+  azure_policy_enabled                = each.value.azure_policy_enabled
+  oidc_issuer_enabled                 = each.value.oidc_issuer_enabled
+  workload_identity_enabled           = each.value.workload_identity_enabled
+  run_command_enabled                 = each.value.run_command_enabled
+  azure_rbac_enabled                  = each.value.azure_rbac_enabled
+  identity_type                       = each.value.identity_type
+  private_dns_zone_id                 = each.value.private_dns_zone_id
+  node_os_upgrade_channel             = each.value.node_os_upgrade_channel
+  network_profile                     = each.value.network_profile
+  tags                                = var.tags
 }
 
 resource "azurerm_kubernetes_cluster_node_pool" "this" {

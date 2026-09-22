@@ -1,6 +1,7 @@
 output "id" {
   description = "AKS resource ID, usable as a scope for additional Azure role assignments."
   value       = azurerm_kubernetes_cluster.this.id
+  depends_on  = [azurerm_role_assignment.system_network]
 }
 
 output "name" {
@@ -19,8 +20,8 @@ output "oidc_issuer_url" {
 }
 
 output "identity_principal_id" {
-  description = "Principal ID of the cluster's user-assigned managed identity."
-  value       = azurerm_user_assigned_identity.this.principal_id
+  description = "Principal ID of the selected cluster managed identity."
+  value       = var.identity_type == "UserAssigned" ? azurerm_user_assigned_identity.this[0].principal_id : azurerm_kubernetes_cluster.this.identity[0].principal_id
 }
 
 output "subnet_id" {

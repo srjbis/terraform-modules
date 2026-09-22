@@ -1,6 +1,6 @@
 # AKS module
 
-Creates a VNet/subnet through the sibling network module, a cluster identity and network role assignment, then AKS with its required autoscaled Linux system pool in an existing resource group. Requires Terraform >= 1.9, < 2 and AzureRM >= 4.43, < 5. Configure AzureRM and authentication in the caller.
+Creates a VNet/subnet through the sibling network module, a cluster identity and network role assignment, then AKS with its required Linux system pool in an existing resource group. All cluster settings are configurable with the existing secure/autoscaling defaults. Requires Terraform >= 1.9, < 2 and AzureRM >= 4.43, < 5. Configure AzureRM and authentication in the caller.
 
 ```hcl
 provider "azurerm" {
@@ -9,7 +9,7 @@ provider "azurerm" {
 }
 
 module "aks" {
-  source = "git::https://github.com/srjbis/terraform-modules.git//aks?ref=aks-v2.0.0"
+  source = "git::https://github.com/srjbis/terraform-modules.git//aks?ref=aks-v2.1.0"
 
   name                   = "aks-platform"
   resource_group_name    = "rg-platform"
@@ -30,13 +30,13 @@ The tag must be published before the Git source can resolve. Git authentication 
 
 ## Behavior and scope
 
-The API is private by default, with Azure-managed private DNS. Access requires routing and DNS resolution to the created VNet (for example a connected administrative host). Public FQDN and remote run-command access are disabled. The module uses a user-assigned identity, Entra authentication, Azure RBAC, disabled local accounts, Azure Policy, OIDC and workload identity. Administrator groups must exist in the subscription tenant. Callers manage additional Azure role assignments; ordinary users typically need the Cluster User role to retrieve credentials plus appropriate AKS data-plane roles.
+The API is private by default, with Azure-managed private DNS. Access requires routing and DNS resolution to the created VNet (for example a connected administrative host). Defaults disable public FQDN and remote run-command access, and enable a user-assigned identity, Entra authentication, Azure RBAC, disabled local accounts, Azure Policy, OIDC and workload identity. These settings can be overridden using the inputs below. Administrator groups must exist in the subscription tenant. Callers manage additional Azure role assignments; ordinary users typically need the Cluster User role to retrieve credentials plus appropriate AKS data-plane roles.
 
-The network module creates a VNet named after the cluster and a subnet (default nodes) in the supplied resource group. AKS creates its managed node resource group. Networking uses Azure CNI overlay, Calico policy support and a Standard load balancer for egress. The service CIDR is 10.1.0.0/16 (DNS 10.1.0.10), and pod CIDR is 10.244.0.0/16. VNet overlap with either range is rejected. Other CIDR syntax/containment guardrails come from the network module. Size subnets for all nodes plus scale-out/rotation and check overlap with connected networks.
+The network module creates a VNet named after the cluster and a subnet (default nodes) in the supplied resource group. AKS creates its managed node resource group. Networking defaults to Azure CNI overlay, Calico policy and a Standard load balancer for egress. Default service CIDR is 10.1.0.0/16 (DNS 10.1.0.10), and default pod CIDR is 10.244.0.0/16. Set network_profile to override them. Validation rejects overlap between active ranges and verifies DNS membership. Size subnets and pod ranges for all nodes plus scale-out/rotation, and check overlap with connected networks.
 
-The user-assigned identity receives Network Contributor on the VNet before AKS creation. The Terraform caller needs permission to create identities and role assignments, in addition to network/AKS resources. Azure authorization propagation can take time even after the role assignment exists. The module does not create peering, custom private DNS zones, monitoring workspaces or workload NetworkPolicy rules. Azure Policy enables the add-on; organizational assignments remain caller-managed. Use the separate node-pool module for additional pools.
+The default user-assigned identity receives Network Contributor on the VNet before AKS creation. With SystemAssigned, the principal and role assignment can only be created after AKS; dependent node pools wait for that assignment. The Terraform caller needs permission to create identities and role assignments, in addition to network/AKS resources. Azure authorization propagation can take time even after an assignment exists. Custom private DNS zone IDs require UserAssigned identity; the module grants Private DNS Zone Contributor on that existing zone. It does not create the custom zone, peering, monitoring or workload NetworkPolicy rules. DNS zone naming, links and cross-subscription permissions must meet Azure requirements.
 
-The system pool uses Ubuntu and autoscaling. Terraform does not manage the live desired node count; it manages the minimum and maximum. The temporary pool name `rotation` is reserved for resize/rotation operations, which may disrupt workloads and require spare capacity. Node OS updates use NodeImage. Kubernetes control-plane upgrades remain caller-managed; null version asks Azure for its recommended version at creation, and does not configure automatic control-plane upgrades.
+The system pool defaults to Ubuntu and autoscaling. With autoscaling enabled, node_count is omitted and the autoscaler owns the desired count. With autoscaling disabled, Terraform manages node_count, including subsequent resizes. The configurable temporary pool name defaults to rotation and must differ from the system pool name. Rotation may disrupt workloads and requires spare capacity. Node OS updates default to NodeImage. Kubernetes control-plane upgrades remain caller-managed; null version asks Azure for its recommended version at creation and does not enable automatic control-plane upgrades.
 
 For an explicitly public endpoint:
 
@@ -69,17 +69,74 @@ Required inputs reject null. Inputs with non-null defaults use those defaults wh
 
 | Field | Default | Guardrail |
 | --- | --- | --- |
-| `name` | `system` | 1-12 lowercase letters/digits, letter first; not `rotation` |
+| `name` | `system` | 1-12 lowercase letters/digits, letter first; different from rotation name |
 | `vm_size` | `Standard_D4s_v5` | `Standard_` SKU syntax |
 | `min_count` | `2` | Integer >=1 and <=max_count |
 | `max_count` | `5` | Integer >=min_count and <=1000 |
 | `zones` | `[]` | Set containing only `1`, `2`, `3`; empty means no explicit zone selection |
+| `temporary_name_for_rotation` | `rotation` | 1-12 lowercase letters/digits, letter first; different from pool name |
+| `auto_scaling_enabled` | `true` | Boolean; false selects fixed node_count and omits min/max from the resource |
+| `node_count` | `2` | Integer 1-1000; used only when autoscaling is false |
+| `os_sku` | `Ubuntu` | Ubuntu or AzureLinux |
+| `node_public_ip_enabled` | `false` | Boolean |
+
+Additional top-level settings:
+
+| Input | Default | Guardrail |
+| --- | --- | --- |
+| `private_cluster_public_fqdn_enabled` | `false` | Requires private cluster |
+| `private_dns_zone_id` | `System` | System, None, or existing DNS zone resource ID; applied only to private clusters |
+| `role_based_access_control_enabled` | `true` | Disabling also requires azure_rbac_enabled=false and local_account_disabled=false; omits Entra integration |
+| `azure_rbac_enabled` | `true` | Requires Kubernetes RBAC; false uses Kubernetes authorization with Entra authentication |
+| `local_account_disabled` | `true` | Requires Kubernetes RBAC/Entra integration |
+| `azure_policy_enabled` | `true` | Boolean |
+| `oidc_issuer_enabled` | `true` | Boolean |
+| `workload_identity_enabled` | `true` | Requires OIDC |
+| `run_command_enabled` | `false` | Boolean |
+| `node_os_upgrade_channel` | `NodeImage` | None, Unmanaged, SecurityPatch, NodeImage |
+| `identity_type` | `UserAssigned` | UserAssigned or SystemAssigned |
+
+Private DNS None requires private_cluster_public_fqdn_enabled=true because this module does not configure custom DNS servers. Existing custom DNS zones require a private cluster and UserAssigned identity.
+
+`network_profile` fields (object defaults to `{}`):
+
+| Field | Default | Guardrail |
+| --- | --- | --- |
+| `network_plugin` | `azure` | azure or kubenet |
+| `network_plugin_mode` | `overlay` | overlay or none; overlay requires azure |
+| `network_policy` | `calico` | calico, azure, cilium, none; azure requires flat Azure CNI |
+| `network_data_plane` | `azure` | azure or cilium; cilium requires Azure overlay and cilium/none policy |
+| `load_balancer_sku` | `standard` | standard only; Basic is retired for AKS |
+| `outbound_type` | `loadBalancer` | loadBalancer or userAssignedNATGateway |
+| `service_cidr` | `10.1.0.0/16` | Canonical IPv4 /13-/29, nonoverlapping with VNet and active pod range |
+| `dns_service_ip` | `10.1.0.10` | Inside service_cidr; not network, broadcast or first service address |
+| `pod_cidr` | `10.244.0.0/16` | Canonical IPv4 /8-/24; applied only to overlay or kubenet |
+
+Use the string none to omit the plugin mode or policy; null optional fields use defaults. Flat Azure CNI automatically omits pod_cidr. NAT egress creates a Standard public IP, NAT gateway and associations before AKS. Managed NAT is incompatible with this module-owned VNet. Custom routes and isolated-network bootstrapping are not provided, so those outbound modes are rejected. Azure availability, capacity and CIDR sizing for actual workload/node totals remain caller responsibilities.
+
+Example overrides (all omitted settings keep their existing defaults):
+
+```hcl
+node_os_upgrade_channel = "SecurityPatch"
+system_node_pool = {
+  auto_scaling_enabled        = false
+  node_count                  = 3
+  temporary_name_for_rotation = "rolling"
+}
+network_profile = {
+  service_cidr   = "172.21.0.0/16"
+  dns_service_ip = "172.21.0.53"
+  pod_cidr       = "172.22.0.0/16"
+}
+```
 
 Validation intentionally enforces a supported subset of Azure options. It catches malformed values and contradictory combinations, but cannot verify group/resource existence, regional Kubernetes versions, VM system-pool suitability, zones, quotas, capacity, or caller permissions. Azure validates those during a real deployment. UUID format alone does not prove an administrator group exists.
 
 ## Outputs
 
-`id`, `name`, `node_resource_group`, `oidc_issuer_url`, `identity_principal_id`, `kubelet_identity`, `network_id` and `subnet_id`. The identity output now refers to the user-assigned identity. Kubeconfig and credentials are not exported. Terraform state still contains provider-returned cluster data; store it in a protected backend.
+`id`, `name`, `node_resource_group`, `oidc_issuer_url`, `identity_principal_id`, `kubelet_identity`, `network_id` and `subnet_id`. The identity output refers to the selected identity type. Kubeconfig and credentials are not exported. Terraform state still contains provider-returned cluster data; store it in a protected backend.
+
+Version 2.1 preserves existing defaults and includes moved blocks for the conditional user identity and network role assignment. Their state addresses gain [0] without recreation under the default configuration. Review actual plans before changing identity, network modes, CIDRs, DNS or pool sizing.
 
 ## Migrating from v1
 

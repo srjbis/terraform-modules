@@ -31,7 +31,7 @@ resource "azurerm_resource_group" "this" {
 module "aks" {
   source = "../.."
   # For consumers after release, replace source with:
-  # source = "git::https://github.com/srjbis/terraform-modules.git//aks?ref=aks-v2.0.0"
+  # source = "git::https://github.com/srjbis/terraform-modules.git//aks?ref=aks-v2.1.0"
 
   name                   = "aks-example"
   resource_group_name    = azurerm_resource_group.this.name
@@ -41,6 +41,13 @@ module "aks" {
   network = {
     address_space = "172.20.0.0/16"
     subnet_prefix = "172.20.0.0/22"
+  }
+  # Optional overrides. Omit these to retain the original module defaults.
+  node_os_upgrade_channel = "SecurityPatch"
+  network_profile = {
+    service_cidr   = "172.21.0.0/16"
+    dns_service_ip = "172.21.0.53"
+    pod_cidr       = "172.22.0.0/16"
   }
   tags = { environment = "example" }
 }

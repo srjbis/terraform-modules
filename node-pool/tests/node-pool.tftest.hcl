@@ -79,6 +79,50 @@ run "valid_maximum" {
   }
 }
 
+run "create_with_configurable_aks" {
+  command = apply
+  variables {
+    existing_aks = null
+    aks = {
+      name                                = "aks-test"
+      resource_group_name                 = "rg-test"
+      location                            = "eastus2"
+      dns_prefix                          = "aks-test"
+      admin_group_object_ids              = ["11111111-1111-1111-1111-111111111111"]
+      identity_type                       = "SystemAssigned"
+      private_cluster_public_fqdn_enabled = true
+      private_dns_zone_id                 = "None"
+      role_based_access_control_enabled   = false
+      azure_rbac_enabled                  = false
+      local_account_disabled              = false
+      azure_policy_enabled                = false
+      oidc_issuer_enabled                 = false
+      workload_identity_enabled           = false
+      run_command_enabled                 = true
+      node_os_upgrade_channel             = "SecurityPatch"
+      system_node_pool = {
+        auto_scaling_enabled        = false
+        node_count                  = 3
+        os_sku                      = "AzureLinux"
+        node_public_ip_enabled      = true
+        temporary_name_for_rotation = "rolling"
+      }
+      # This VNet overlaps the OLD service range: custom service_cidr must
+      # reach the child module for the configuration to pass validation.
+      network = { address_space = "10.1.0.0/16", subnet_prefix = "10.1.0.0/22" }
+      network_profile = {
+        service_cidr   = "172.21.0.0/16"
+        dns_service_ip = "172.21.0.53"
+        pod_cidr       = "172.22.0.0/16"
+      }
+    }
+  }
+  assert {
+    condition     = output.created_aks && output.aks_id == module.aks["this"].id
+    error_message = "AKS configuration overrides must work through the node-pool entry point."
+  }
+}
+
 run "existing_azure_managed_subnet" {
   command = plan
   override_data {
