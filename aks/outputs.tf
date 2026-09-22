@@ -19,8 +19,18 @@ output "oidc_issuer_url" {
 }
 
 output "identity_principal_id" {
-  description = "Principal ID of the cluster's system-assigned managed identity."
-  value       = azurerm_kubernetes_cluster.this.identity[0].principal_id
+  description = "Principal ID of the cluster's user-assigned managed identity."
+  value       = azurerm_user_assigned_identity.this.principal_id
+}
+
+output "subnet_id" {
+  description = "Subnet created by the network module and used by the system pool."
+  value       = module.network.subnet_id
+}
+
+output "network_id" {
+  description = "Virtual network created for this cluster."
+  value       = module.network.id
 }
 
 output "kubelet_identity" {

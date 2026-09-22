@@ -1,4 +1,22 @@
-mock_provider "azurerm" {}
+mock_provider "azurerm" {
+  mock_resource "azurerm_virtual_network" {
+    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-test/providers/Microsoft.Network/virtualNetworks/aks-test" }
+  }
+  mock_resource "azurerm_subnet" {
+    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-test/providers/Microsoft.Network/virtualNetworks/aks-test/subnets/nodes" }
+  }
+  mock_resource "azurerm_user_assigned_identity" {
+    defaults = {
+      id           = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/aks-test-identity"
+      principal_id = "11111111-1111-1111-1111-111111111111"
+      client_id    = "11111111-1111-1111-1111-111111111111"
+      tenant_id    = "11111111-1111-1111-1111-111111111111"
+    }
+  }
+  mock_resource "azurerm_kubernetes_cluster" {
+    defaults = { id = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-test/providers/Microsoft.ContainerService/managedClusters/aks-test" }
+  }
+}
 
 variables {
   name                   = "aks-test"
@@ -65,7 +83,7 @@ run "public_allowlist_and_custom_pool" {
 run "mock_apply_outputs" {
   command = apply
   assert {
-    condition     = output.name == "aks-test" && output.id == azurerm_kubernetes_cluster.this.id && output.oidc_issuer_url == azurerm_kubernetes_cluster.this.oidc_issuer_url && output.identity_principal_id == azurerm_kubernetes_cluster.this.identity[0].principal_id && output.node_resource_group == azurerm_kubernetes_cluster.this.node_resource_group && output.kubelet_identity == azurerm_kubernetes_cluster.this.kubelet_identity
+    condition     = output.name == "aks-test" && output.id == azurerm_kubernetes_cluster.this.id && output.oidc_issuer_url == azurerm_kubernetes_cluster.this.oidc_issuer_url && output.identity_principal_id == azurerm_user_assigned_identity.this.principal_id && output.node_resource_group == azurerm_kubernetes_cluster.this.node_resource_group && output.kubelet_identity == azurerm_kubernetes_cluster.this.kubelet_identity
     error_message = "Outputs must expose the corresponding cluster attributes."
   }
 }

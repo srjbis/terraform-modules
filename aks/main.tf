@@ -18,7 +18,8 @@ resource "azurerm_kubernetes_cluster" "this" {
   node_os_upgrade_channel             = "NodeImage"
 
   identity {
-    type = "SystemAssigned"
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.this.id]
   }
 
   azure_active_directory_role_based_access_control {
@@ -34,6 +35,7 @@ resource "azurerm_kubernetes_cluster" "this" {
   }
 
   default_node_pool {
+    vnet_subnet_id              = module.network.subnet_id
     name                        = var.system_node_pool.name
     temporary_name_for_rotation = "rotation"
     vm_size                     = var.system_node_pool.vm_size
@@ -52,9 +54,14 @@ resource "azurerm_kubernetes_cluster" "this" {
     network_policy      = "calico"
     load_balancer_sku   = "standard"
     outbound_type       = "loadBalancer"
+    service_cidr        = "10.1.0.0/16"
+    dns_service_ip      = "10.1.0.10"
+    pod_cidr            = "10.244.0.0/16"
   }
 
   tags = var.tags
+
+  depends_on = [azurerm_role_assignment.network]
 
   lifecycle {
     ignore_changes = [default_node_pool[0].node_count]

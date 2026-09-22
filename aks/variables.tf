@@ -123,12 +123,30 @@ variable "system_node_pool" {
 }
 
 variable "tags" {
-  description = "Tags applied to the cluster and system pool."
+  description = "Tags applied to the cluster, system pool, identity and virtual network."
   type        = map(string)
   default     = {}
   nullable    = false
   validation {
     condition     = length(var.tags) <= 50 && alltrue([for key, value in var.tags : length(key) > 0 && length(key) <= 512 && can(regex("^[^<>%&\\\\?/]+$", key)) && (value == null ? false : length(value) <= 256)])
     error_message = "Use at most 50 tags with keys of 1-512 characters (no < > % & backslash ? /) and non-null values up to 256 characters."
+  }
+}
+
+variable "network" {
+  description = "Network created with AKS. CIDRs must not overlap the fixed service (10.1.0.0/16) or pod (10.244.0.0/16) ranges."
+  type = object({
+    address_space = optional(string, "10.0.0.0/16")
+    subnet_prefix = optional(string, "10.0.0.0/22")
+    subnet_name   = optional(string, "nodes")
+  })
+  default  = {}
+  nullable = false
+  validation {
+    condition = try(alltrue([for reserved in ["10.1.0.0/16", "10.244.0.0/16"] :
+      cidrhost("${split("/", var.network.address_space)[0]}/${min(tonumber(split("/", var.network.address_space)[1]), 16)}", 0) !=
+      cidrhost("${split("/", reserved)[0]}/${min(tonumber(split("/", var.network.address_space)[1]), 16)}", 0)
+    ]), false)
+    error_message = "network.address_space must be a valid CIDR that does not overlap 10.1.0.0/16 or 10.244.0.0/16."
   }
 }

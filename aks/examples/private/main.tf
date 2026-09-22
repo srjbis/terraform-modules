@@ -31,14 +31,18 @@ resource "azurerm_resource_group" "this" {
 module "aks" {
   source = "../.."
   # For consumers after release, replace source with:
-  # source = "git::https://github.com/srjbis/terraform-modules.git//aks?ref=aks-v1.0.0"
+  # source = "git::https://github.com/srjbis/terraform-modules.git//aks?ref=aks-v2.0.0"
 
   name                   = "aks-example"
   resource_group_name    = azurerm_resource_group.this.name
   location               = azurerm_resource_group.this.location
   dns_prefix             = "aks-example"
   admin_group_object_ids = var.admin_group_object_ids
-  tags                   = { environment = "example" }
+  network = {
+    address_space = "172.20.0.0/16"
+    subnet_prefix = "172.20.0.0/22"
+  }
+  tags = { environment = "example" }
 }
 
 output "cluster_id" {
