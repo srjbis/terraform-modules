@@ -37,10 +37,10 @@ Outputs: `id` (VNet ID), `name`, `subnet_id`, `address_space`, `subnet_prefix`.
 From the repository root:
 
 ```sh
-terraform -chdir=network init -backend=false -lockfile=readonly
+terraform -chdir=network init -backend=false
 terraform -chdir=network validate
 terraform -chdir=network test
-terraform -chdir=network/examples/basic init -backend=false -lockfile=readonly
+terraform -chdir=network/examples/basic init -backend=false
 terraform -chdir=network/examples/basic validate
 ```
 

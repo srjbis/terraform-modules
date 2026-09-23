@@ -10,20 +10,22 @@ From the repository root, run formatting plus initialization, validation and tes
 
 ```sh
 terraform fmt -check -recursive
-terraform -chdir=network init -backend=false -lockfile=readonly
+terraform -chdir=network init -backend=false
 terraform -chdir=network validate
 terraform -chdir=network test
-terraform -chdir=aks init -backend=false -lockfile=readonly
+terraform -chdir=aks init -backend=false
 terraform -chdir=aks validate
 terraform -chdir=aks test
-terraform -chdir=node-pool init -backend=false -lockfile=readonly
+terraform -chdir=node-pool init -backend=false
 terraform -chdir=node-pool validate
 terraform -chdir=node-pool test
 ```
 
 Also initialize and validate `network/examples/basic`, `aks/examples/private`, `node-pool/examples/existing-aks`, and `node-pool/examples/new-aks`. GitHub Actions runs the three suites and all examples on Terraform 1.9.8 and 1.15.2.
 
-Commit lock files at module and example roots. To upgrade AzureRM, run init -upgrade, regenerate checksums with `terraform providers lock -platform=linux_amd64 -platform=windows_amd64`, rerun checks and review the resulting locks. Consumers resolve provider constraints using their own root lock files.
+Terraform lock files and .gitignore are local-only and are not tracked in this repository. Initialization creates local lock files; CI resolves a provider matching the module constraints on each fresh checkout. To upgrade a local provider selection, run init -upgrade and rerun checks. Consumers manage their own root lock files.
+
+For fresh clones, configure local exclusions in .git/info/exclude (or an untracked .gitignore) for .gitignore, **/.terraform.lock.hcl, **/.terraform/*, *.tfstate, *.tfstate.*, *.tfplan, *.tfvars and *.tfvars.json before staging changes. Existing release tags and historical commits retain the files originally committed; this cleanup applies to the current main branch.
 
 ## Publishing configurable AKS settings
 

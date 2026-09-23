@@ -69,7 +69,7 @@ Outputs: `id`, `name`, `aks_id`, `created_aks`, `subnet_id`, `network_id` (null 
 ## Tests and examples
 
 ```sh
-terraform -chdir=node-pool init -backend=false -lockfile=readonly
+terraform -chdir=node-pool init -backend=false
 terraform -chdir=node-pool validate
 terraform -chdir=node-pool test
 ```
