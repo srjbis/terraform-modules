@@ -7,3 +7,5 @@
 crash.log
 crash.*.log
 .terraformrc.local
+.gitignore
+**/.terraform.lock.hcl
